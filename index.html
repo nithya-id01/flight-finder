@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheapest flight finder</title>
+<style>
+:root{--bg:#eef2f6;--card:#fff;--ink:#14213d;--mute:#5b677d;--line:#d5dce6;--acc:#0b7a75;--accbg:#d9f1ee;--err:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1626;--card:#16213a;--ink:#e8eefb;--mute:#9aa7c0;--line:#2a3857;--acc:#4fd1c5;--accbg:#12403f;--err:#f97066}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Trebuchet MS",Verdana,system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:28px 16px 48px}
+h1{font-size:1.9rem;line-height:1.15;margin:0 0 6px}
+.sub{color:var(--mute);margin:0 0 20px}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+label{display:flex;flex-direction:column;font-size:.85rem;color:var(--mute);gap:4px}
+input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button{font:inherit;font-weight:700;cursor:pointer;background:var(--acc);color:var(--bg);border:0;border-radius:8px;padding:10px 20px;margin-top:14px}
+button:disabled{opacity:.6;cursor:wait}
+.win{background:var(--accbg);border:2px solid var(--acc);border-radius:12px;padding:16px;margin-bottom:12px}
+.win b{display:block;font-size:1.5rem}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.p{font-weight:700;font-size:1.1rem;text-align:right}
+.sm{color:var(--mute);font-size:.85rem}
+.err{color:var(--err)}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<main>
+<h1>Cheapest flight finder</h1>
+<p class="sub">Enter a route and tap Check. Prices come back in rupees, cheapest first.</p>
+
+<section>
+<div class="grid">
+<label>From<input id="from" value="BLR" maxlength="3" autocapitalize="characters"></label>
+<label>To<input id="to" value="HYD" maxlength="3" autocapitalize="characters"></label>
+<label>Date<input id="date" type="date"></label>
+</div>
+<button id="go">Check</button>
+</section>
+
+<div id="out" aria-live="polite"></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const d = new Date(); d.setDate(d.getDate() + 14);
+$("date").value = d.toISOString().slice(0, 10);
+const inr = (n) => "₹" + Number(n).toLocaleString("en-IN");
+const hm = (m) => (m ? Math.floor(m / 60) + "h " + (m % 60) + "m" : "");
+
+$("go").addEventListener("click", async () => {
+  const out = $("out"), btn = $("go");
+  out.textContent = "";
+  btn.disabled = true; btn.textContent = "Checking…";
+  try {
+    const q = new URLSearchParams({ from: $("from").value.trim(), to: $("to").value.trim(), date: $("date").value });
+    const r = await fetch("/api/search?" + q);
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Something went wrong.");
+    if (!j.offers.length) { out.innerHTML = '<section class="sm">No flights found for that route and date.</section>'; return; }
+
+    const best = j.offers[0], top = j.offers.slice(0, 10);
+    const win = document.createElement("div"); win.className = "win";
+    const b = document.createElement("b");
+    b.textContent = best.airline + " is cheapest at " + inr(best.price);
+    const s = document.createElement("span");
+    s.textContent = `${j.from} to ${j.to} on ${j.date}, ${best.stops ? best.stops + " stop" : "non-stop"}. Checked ${new Date(j.checkedAt).toLocaleTimeString()}.`;
+    win.append(b, s);
+
+    const sec = document.createElement("section");
+    top.forEach((o) => {
+      const row = document.createElement("div"); row.className = "row";
+      const l = document.createElement("div");
+      l.textContent = o.airline;
+      const m = document.createElement("div"); m.className = "sm";
+      m.textContent = [o.departs && o.departs.slice(-5) + " to " + o.arrives.slice(-5), o.stops ? o.stops + " stop" : "Non-stop", hm(o.minutes)].filter(Boolean).join(", ");
+      l.appendChild(m);
+      const p = document.createElement("div"); p.className = "p"; p.textContent = inr(o.price);
+      row.append(l, p); sec.appendChild(row);
+    });
+    out.append(win, sec);
+    if (j.bookUrl) {
+      const a = document.createElement("a"); a.href = j.bookUrl; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open these results on Google Flights to book";
+      out.appendChild(a);
+    }
+  } catch (e) {
+    const p = document.createElement("p"); p.className = "err"; p.textContent = e.message; out.appendChild(p);
+  } finally {
+    btn.disabled = false; btn.textContent = "Check";
+  }
+});
+</script>
+</body>
+</html>
