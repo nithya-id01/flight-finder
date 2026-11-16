@@ -68,7 +68,7 @@ $("go").addEventListener("click", async () => {
     const b = document.createElement("b");
     b.textContent = best.airline + " is cheapest at " + inr(best.price);
     const s = document.createElement("span");
-    s.textContent = `${j.from} to ${j.to} on ${j.date}, ${best.stops ? best.stops + " stop" : "non-stop"}. Checked ${new Date(j.checkedAt).toLocaleTimeString()}.`;
+    s.textContent = `${j.from} to ${j.to} on ${j.date}, ${best.stops ? best.stops + " stop" : "non-stop"}. Prices are recent searches, so confirm the final fare when booking.`;
     win.append(b, s);
 
     const sec = document.createElement("section");
@@ -77,14 +77,14 @@ $("go").addEventListener("click", async () => {
       const l = document.createElement("div");
       l.textContent = o.airline;
       const m = document.createElement("div"); m.className = "sm";
-      m.textContent = [o.departs && o.departs.slice(-5) + " to " + o.arrives.slice(-5), o.stops ? o.stops + " stop" : "Non-stop", hm(o.minutes)].filter(Boolean).join(", ");
+      m.textContent = [o.departs && "Departs " + o.departs, o.stops ? o.stops + " stop" : "Non-stop", hm(o.minutes)].filter(Boolean).join(", ");
       l.appendChild(m);
       const p = document.createElement("div"); p.className = "p"; p.textContent = inr(o.price);
       row.append(l, p); sec.appendChild(row);
     });
     out.append(win, sec);
     if (j.bookUrl) {
-      const a = document.createElement("a"); a.href = j.bookUrl; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open these results on Google Flights to book";
+      const a = document.createElement("a"); a.href = j.bookUrl; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = "Open the cheapest fare to book";
       out.appendChild(a);
     }
   } catch (e) {
